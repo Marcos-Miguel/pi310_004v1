@@ -1,6 +1,27 @@
 from flask import Flask, render_template, request, redirect
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
+
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///pi310.sqlite3.db"
+
+# initialize the app with the extension
+db = SQLAlchemy(app)
+
+class Contatos(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(50), nullable = False)
+    email = db.Column(db.String(120), nullable = False)
+    descricao = db.Column(db.String(200))
+    date_created = db.Column(db.DateTime(6), default=db.func.current_timestamp(), nullable = False)
+
+    def __init__(self, nome, email, descricao):
+        self.nome = nome
+        self.email = email
+        self.descricao = descricao
+
+with app.app_context():
+    db.create_all()
 
 @app.route('/imc/', methods=['GET', 'POST'])
 def imc_calc():
@@ -31,9 +52,19 @@ def imc_calc():
 def index():
     return render_template('index.html')
 
+#Neste estágio do aplicativo a leitura dos dados inseridos
+#no banco de dados poderá ser feito pelo software: sqlitestudio.
 @app.route('/contato/', methods=['GET', 'POST'])
 def contato():
-    return render_template('contato.html')
+    if request.method == 'POST':
+        nome = request.form['nome']
+        email = request.form['email']
+        assunto = request.form['assunto']
+        contato = Contatos(nome, email, assunto)
+        db.session.add(contato)
+        db.session.commit()
+        status = "Mensagem registrada"
+    return render_template('contato.html', status = status)
 
 if __name__ == '__main__':
     app.run(debug=True)
